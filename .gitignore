@@ -1,0 +1,4 @@
+*.o
+efs/
+efsfuse
+docs/
