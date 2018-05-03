@@ -97,7 +97,8 @@ uint64_t readFile(EFSCompactFileDescriptor* descriptor, uint64_t offset,
  * function stops and returns the number of bytes that could be read. 
  * 
  * If an I/O error occurs, the function returns 0 and the contents of buffer are 
- * undefined.
+ * undefined. If the file does not exist, returns 0 and does not modify the
+ * provided buffer.
  * 
  * @param inode The inode from which to read.
  * @param offset The offset to start reading from.
@@ -115,8 +116,9 @@ uint64_t readFile(uint64_t inode, uint64_t offset, uint64_t size, char* buffer);
  * If EOF is reached before all data has been written, the function will write 
  * data up to the point but no further.
  * 
- * Fails upon I/O error. Does NOT fail if EOF is reached. To test this, the
- * caller should always compare this function's return value with size.
+ * Fails upon I/O error or of the file does not exist. Does NOT fail if EOF is 
+ * reached. To test this, the caller should always compare this function's 
+ * return value with size.
  * 
  * @param inode The inode to update.
  * @param offset The position to start writing inside the specified inode.
@@ -129,6 +131,27 @@ uint64_t updateFile(uint64_t inode, uint64_t offset, uint64_t size,
 	const char* buffer);
 
 /**
+ * Overwrite the region in the provided inode starting at offset and spanning
+ * size bytes with the data stored in buffer. 
+ * 
+ * If EOF is reached before all data has been written, the function will write 
+ * data up to the point but no further.
+ * 
+ * Fails upon I/O error or if the file does not exist. Does NOT fail if EOF is 
+ * reached. To test this, the caller should always compare this function's 
+ * return value with size.
+ * 
+ * @param descriptor The inode to update.
+ * @param offset The position to start writing inside the specified inode.
+ * @param size The number of bytes to write
+ * @param buffer The data to write
+ * 
+ * @returns The number of bytes actually written. 0 upon I/O error.
+ */
+uint64_t updateFile(EFSCompactFileDescriptor* descriptor, uint64_t offset, 
+	uint64_t size, const char* buffer);
+
+/**
  * Append the specified data the the end of the specified inode, and update its
  * file descriptor accordingly. This function will create new file fragments if
  * there are not enough free blocks directly after the end of the file.
@@ -138,7 +161,7 @@ uint64_t updateFile(uint64_t inode, uint64_t offset, uint64_t size,
  * the file is released. 
  * 
  * Fails if an I/O error occurs, if there is not enough space in the filesystem, 
- * or if the file cannot be fragmented further.
+ * if the file cannot be fragmented further, or if the file does not exist.
  * 
  * @param inode The inode to append data to
  * @param size The number of bytes to append
@@ -149,12 +172,33 @@ uint64_t updateFile(uint64_t inode, uint64_t offset, uint64_t size,
 bool appendFile(uint64_t inode, uint64_t size, const char* buffer);
 
 /**
+ * Append the specified data the the end of the specified inode, and update its
+ * file descriptor accordingly. This function will create new file fragments if
+ * there are not enough free blocks directly after the end of the file.
+ * 
+ * Only imformation regarding filesize and fragmentation will be updated inside 
+ * the descriptor. Last accessed and last modified dates should be updated after 
+ * the file is released. 
+ * 
+ * Fails if an I/O error occurs, if there is not enough space in the filesystem, 
+ * if the file cannot be fragmented further, or if the file does not exist.
+ * 
+ * @param descriptor The inode to append data to
+ * @param size The number of bytes to append
+ * @param buffer The data to append to the inode
+ * 
+ * @returns True upon success, false upon failure.
+ */
+bool appendFile(EFSCompactFileDescriptor* descriptor, uint64_t size, 
+	const char* buffer);
+
+/**
  * Adjusts the filesize of the specified inode. Allocates or deallocates blocks at
  * the end of the inode accordingly, and updates filesize and fragmentation
  * information in the file descriptor. 
  * 
  * Fails if an I/O error occurs, if there is not enough space in the filesystem, 
- * or if the file could not be fragmented further.
+ * if the file could not be fragmented further., or if the file does not exis.
  * 
  * @param inode The inode to resize
  * @param newSize The new size of the inode in bytes
@@ -162,5 +206,20 @@ bool appendFile(uint64_t inode, uint64_t size, const char* buffer);
  * @returns True upon success, false upon failure.
  */
 bool resizeFile(uint64_t inode, uint64_t newSize);
+
+/**
+ * Adjusts the filesize of the specified inode. Allocates or deallocates blocks at
+ * the end of the inode accordingly, and updates filesize and fragmentation
+ * information in the file descriptor. 
+ * 
+ * Fails if an I/O error occurs, if there is not enough space in the filesystem, 
+ * if the file could not be fragmented further, or if the file does not exist.
+ * 
+ * @param descriptor The inode to resize
+ * @param newSize The new size of the inode in bytes
+ * 
+ * @returns True upon success, false upon failure.
+ */
+bool resizeFile(EFSCompactFileDescriptor* descriptor, uint64_t newSize);
 
 #endif
